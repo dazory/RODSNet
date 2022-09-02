@@ -91,6 +91,9 @@ class Trainer(InitOpts):
                 else:
                     loss2 = self.criterion(left_seg, labels, sample)
 
+                if self.opts.jsd:
+                    loss2 += self.additional_criterion(left_seg, labels, sample)
+
                 pred_disp = self.resize_pred_disp(pred_disp, gt_disp)
                 if 'pseudo_disp' in sample.keys() and self.opts.load_pseudo_gt:
                     pseudo_curr_loss = DisparityLosses(pyramid_weight, pred_disp_pyramid, pseudo_gt_disp, pseudo_mask)

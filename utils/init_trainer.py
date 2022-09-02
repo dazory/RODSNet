@@ -10,7 +10,7 @@ import utils
 from utils.saver import Saver
 from utils.summaries import TensorboardSummary
 from utils.calculate_weights import calculate_weigths_labels_new
-from utils.loss import BoundaryAwareFocalLoss, FocalLoss2
+from utils.loss import BoundaryAwareFocalLoss, FocalLoss2, JSDLoss
 
 import random
 import numpy as np
@@ -85,11 +85,11 @@ class InitOpts():
 
         self.train_dst, self.val_dst = get_dataset(self.opts)
         self.train_loader = data.DataLoader(
-            self.train_dst, batch_size=self.opts.batch_size, shuffle=True, num_workers=8,
+            self.train_dst, batch_size=self.opts.batch_size, shuffle=True, num_workers=0, #8,
             pin_memory=False,
             drop_last=True, collate_fn=custom_collate)
         self.val_loader = data.DataLoader(
-            self.val_dst, batch_size=self.opts.val_batch_size, shuffle=False, num_workers=8,
+            self.val_dst, batch_size=self.opts.val_batch_size, shuffle=False, num_workers=0, # 8,
             pin_memory=False,
             collate_fn=custom_collate)
         print("Dataset: %s, Train set: %d, Val set: %d" %
@@ -220,6 +220,10 @@ class InitOpts():
                 self.criterion = BoundaryAwareFocalLoss(gamma=.5, num_classes=self.opts.num_classes,
                                                         ignore_id=255, weight=weight, device=self.device,
                                                         opts=self.opts)
+            if self.opts.jsd:
+                self.additional_criterion = JSDLoss(num_classes=self.opts.num_classes,
+                                                    ignore_id=255, weight=weight, device=self.device,
+                                                    opts=self.opts)
 
         # disparity Loss weights
         self.pyramid_weight = {

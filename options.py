@@ -24,6 +24,8 @@ class Options:
                                  help='Name of dataset')
         self.parser.add_argument("--num_classes", type=int, default=None,
                                  help="num classes (default: auto)")
+        self.parser.add_argument('--mini', action='store_true', help='mini version?')
+
 
     def _model_options(self):
         # Deeplab Options
@@ -114,8 +116,6 @@ class Options:
         self.parser.add_argument('--no_build_summary', action='store_true',
                             help='Dont save sammary when training to save space')
         self.parser.add_argument('--save_ckpt_freq', default=10, type=int, help='Save checkpoint frequency (epochs)')
-        self.parser.add_argument('--wandb', action='store_true',
-                                 help='Use wandb logger')
 
     def _train_resume_options(self):
         self.parser.add_argument('--resume', type=str, default=None,
@@ -181,6 +181,12 @@ class Options:
 
         self.parser.add_argument('--without_depth_range_miou', action='store_true', help='not apply depth_range_miou')
 
+    def _ai28_options(self):
+        self.parser.add_argument('--jsd', action='store_true',
+                                 help='Use additional loss = jsd')
+        # Log
+        self.parser.add_argument('--wandb', action='store_true',
+                                 help='Use wandb logger')
 
     def parse(self):
         self._dataset_options()
@@ -189,6 +195,8 @@ class Options:
         # self._pascal_voc_options()
         self._depth_options()
         self._stereo_depth_prediction_options()
+
+        self._ai28_options()
 
         self.options = self.parser.parse_args()
 

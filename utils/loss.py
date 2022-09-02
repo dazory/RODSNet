@@ -59,6 +59,7 @@ class BoundaryAwareFocalLoss(nn.Module):
     def forward(self, input, target, batch, **kwargs):
         if input.shape[-2:] != target.shape[-2:]:
             input = upsample(input, target.shape[-2:])
+        # H, W = target.shape[-2], target.shape[-1]
         target[target == self.ignore_id] = 0  # we can do this because alphas are zero in ignore_id places
         label_distance_weight = batch['label_distance_weight'].to(self.device)
         N = (label_distance_weight.data > 0.).sum()
@@ -248,3 +249,77 @@ def get_smooth_loss(disp, img):
     grad_disp_y *= torch.exp(-grad_img_y)
 
     return grad_disp_x.mean() + grad_disp_y.mean()
+
+
+class JSDLoss(nn.Module):
+    def __init__(self, num_classes=19, ignore_id=19, weight=None, device=None, opts=None):
+        super(JSDLoss, self).__init__()
+        self.num_classes = num_classes
+        self.ignore_id =ignore_id
+        self.weight = weight
+        self.device =device
+        self.otps = opts
+
+    def forward(self, input, target, batch, **kwargs):
+        '''
+        [Input]
+        input:      (1, num_classes, H, W) e.g., (1,20,768,768)
+        target:     (1, H, W) e.g., (1,768,768)
+        batch:      {dict:12}
+                        left, right = (B,3,H,W) = (4,3,768,768)
+                        left_name, right_name = {list:B=4} ∋ str
+                        disp = (B,H,W) = (4,768,768)
+                        label = (B,H,W) = (4,768,768)
+                        disp_distance_weight = (B,H,W) = (4,768,768)
+                        label_distance_weight = (B,H,W) = (4,768,768)
+                        target_size = {tuple:2} = (H,W) = (768,768)
+                        target_size_feats = {tuple:2} = (H/4,W/4) = (192,192)
+                        alphas = {list:1} = [-1]
+                        target_level = {int} 0
+        '''
+        if input.shape[-2:] != target.shape[-2:]:
+            input = upsample(input, target.shape[-2:])
+        B, H, W = target.shape
+        # TODO: Make it allow other batch size.
+        if B is not 3:
+            raise ValueError(f"Only support batch size = 3, which consists of orig, aug1 and aug2,"
+                             f"but got {B}.")
+
+        target[target == self.ignore_id] = 0
+
+        if input.dim() > 2:
+            input = input.view(input.size(0), input.size(1), -1)    # (B,num_classes,H,W) → (B,num_classes,H*W)
+            input = input.transpose(1, 2)                           # (B,num_classes,H*W) → (B,H*W,num_classes)
+            input = input.contiguous().view(-1, input.size(2))      # (B,H*W,num_classes) → (B*H*W,num_classes)
+        target = target.view(-1, 1)                                 # (B,H,W) → (B*H*W, 1)
+        weight = self.weight[target].view(-1).to(self.device)       # (B,H,W) → (B*H*W,)
+
+        logpt = F.log_softmax(input, dim=-1)
+        logpt = logpt.gather(1, target)                             # (B*H*W,1) : (-1, 20)에서 dim=1에 대해 [target]번째 인덱스값만 파싱
+        logpt = logpt.view(-1)                                      # (B*H*W,)
+        pt = logpt.detach().exp()                                   # (B*H*W,)
+
+        # TODO: Simple JSD suppose input batch be three, which contains orig, aug1 and aug2.
+        pt_orig, pt_aug1, pt_aug2 = torch.chunk(pt, 3)
+        pt_orig, pt_aug1, pt_aug2 = pt_orig.view(-1, 1), pt_aug1.view(-1, 1), pt_aug2.view(-1, 1)
+
+        pt_mixture = torch.clamp((pt_orig + pt_aug1 + pt_aug2) / 3., 1e-7, 1).log()
+        loss = (F.kl_div(pt_mixture, pt_orig, reduction='none') +
+                F.kl_div(pt_mixture, pt_aug1, reduction='none') +
+                F.kl_div(pt_mixture, pt_aug2, reduction='none')) / 3.
+
+        # TODO: (WARN) Only use the weight for orig, not aug1 or aug2.
+        weight, _, _ = torch.chunk(weight, 3)
+        weight = weight.view(-1, 1)
+        assert loss.shape == weight.shape
+
+        N = weight.sum()
+
+        loss = weight * loss
+        loss = loss.sum()
+        loss = loss / N
+
+        lambda_weight = 1.0
+        loss = lambda_weight * loss
+
+        return loss
