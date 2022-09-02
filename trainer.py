@@ -21,6 +21,7 @@ from utils.loss import SegmentationLosses, DisparityLosses, get_smooth_loss
 class Trainer(InitOpts):
     def __init__(self, options):
         super().__init__(options)
+        self.wandb_logger = None
 
     def train(self):
         interval_loss = 0.0
@@ -51,6 +52,8 @@ class Trainer(InitOpts):
 
         last_data_time = time.time()
         for i, sample in enumerate(self.train_loader):
+            self.wandb_logger.before_train_iter()
+
             data_loader_time = time.time() - last_data_time
             data_cycle += data_loader_time
             self.num_iter += 1
@@ -136,6 +139,8 @@ class Trainer(InitOpts):
             last_data_time = time.time()
             del total_loss, sample
 
+            self.wandb_logger.after_train_iter()
+
         train_epoch_loss = train_epoch_loss / num_img_tr
         self.writer.add_scalar('train/total_loss_epoch', train_epoch_loss, self.cur_epochs)
 
@@ -169,6 +174,8 @@ class Trainer(InitOpts):
                                        self.opts.val_img_width)).to(self.device, dtype=torch.float32)
 
             for i, sample in enumerate(self.val_loader):
+                self.wandb_logger.before_val_iter()
+
                 data_time = time.time() - start
                 self.time_val_dataloader.append(data_time)
 
@@ -277,6 +284,7 @@ class Trainer(InitOpts):
                     img_id += 1
 
                 start = time.time()
+                self.wandb_logger.after_val_iter()
             del sample
 
         # test validation performance
@@ -716,3 +724,6 @@ class Trainer(InitOpts):
                                 gt_disp.size(-1) / pred_disp.size(-1))
             pred_disp = pred_disp.squeeze(1)  # [B, H, W]
         return pred_disp
+
+    def set_wandb_logger(self, logger):
+        self.wandb_logger = logger

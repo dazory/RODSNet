@@ -17,7 +17,7 @@ class Options:
 
     def _dataset_options(self):
         # Model Options
-        self.parser.add_argument("--data_root", type=str, default='/home/tjsong/datasets',
+        self.parser.add_argument("--data_root", type=str, default='/ws/data',
                                  help="path to Dataset ")
         self.parser.add_argument("--dataset", type=str, default='cityscapes',
                                  choices=['cityscapes', 'city_lost', 'kitti_2015', 'sceneflow', 'kitti_mix'],
@@ -114,6 +114,8 @@ class Options:
         self.parser.add_argument('--no_build_summary', action='store_true',
                             help='Dont save sammary when training to save space')
         self.parser.add_argument('--save_ckpt_freq', default=10, type=int, help='Save checkpoint frequency (epochs)')
+        self.parser.add_argument('--wandb', action='store_true',
+                                 help='Use wandb logger')
 
     def _train_resume_options(self):
         self.parser.add_argument('--resume', type=str, default=None,
