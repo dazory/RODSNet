@@ -21,7 +21,6 @@ if __name__ == '__main__':
     trainer = Trainer(opts)
 
     wandb_logger = WandbLogger(init_kwargs=parse_wandb_init_kwargs(opts),
-                               interval=500,
                                use_wandb=opts.wandb)
     trainer.set_wandb_logger(logger=wandb_logger)
 
@@ -36,10 +35,8 @@ if __name__ == '__main__':
         for epoch in range(trainer.opts.start_epoch, trainer.opts.epochs):
             trainer.wandb_logger.before_train_epoch()
             trainer.train()
-            trainer.wandb_logger.after_train_epoch()
             trainer.wandb_logger.before_val_epoch()
             trainer.validate()
-            trainer.wandb_logger.after_val_epoch()
             trainer.scheduler.step()
             trainer.cur_epochs += 1
         trainer.wandb_logger.after_run()
