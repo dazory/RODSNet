@@ -2,100 +2,103 @@ import numpy as np
 from numpy import random
 from PIL import Image
 
+
+
+
+
 from PIL import Image, ImageOps, ImageEnhance
 
-
 def int_parameter(level, maxval):
-    """Helper function to scale `val` between 0 and maxval .
+  """Helper function to scale `val` between 0 and maxval .
 
-    Args:
-      level: Level of the operation that will be between [0, `PARAMETER_MAX`].
-      maxval: Maximum value that the operation can have. This will be scaled to
-        level/PARAMETER_MAX.
+  Args:
+    level: Level of the operation that will be between [0, `PARAMETER_MAX`].
+    maxval: Maximum value that the operation can have. This will be scaled to
+      level/PARAMETER_MAX.
 
-    Returns:
-      An int that results from scaling `maxval` according to `level`.
-    """
-    return int(level * maxval / 10)
+  Returns:
+    An int that results from scaling `maxval` according to `level`.
+  """
+  return int(level * maxval / 10)
 
 
 def float_parameter(level, maxval):
-    """Helper function to scale `val` between 0 and maxval.
+  """Helper function to scale `val` between 0 and maxval.
 
-    Args:
-      level: Level of the operation that will be between [0, `PARAMETER_MAX`].
-      maxval: Maximum value that the operation can have. This will be scaled to
-        level/PARAMETER_MAX.
+  Args:
+    level: Level of the operation that will be between [0, `PARAMETER_MAX`].
+    maxval: Maximum value that the operation can have. This will be scaled to
+      level/PARAMETER_MAX.
 
-    Returns:
-      A float that results from scaling `maxval` according to `level`.
-    """
-    return float(level) * maxval / 10.
+  Returns:
+    A float that results from scaling `maxval` according to `level`.
+  """
+  return float(level) * maxval / 10.
 
 
 def sample_level(n):
-    return np.random.uniform(low=0.1, high=n)
+  return np.random.uniform(low=0.1, high=n)
 
 
 def autocontrast(pil_img, _, __):
-    return ImageOps.autocontrast(pil_img)
+  return ImageOps.autocontrast(pil_img)
 
 
 def equalize(pil_img, _, __):
-    return ImageOps.equalize(pil_img)
+  return ImageOps.equalize(pil_img)
 
 
 def posterize(pil_img, level, _):
-    level = int_parameter(sample_level(level), 4)
-    return ImageOps.posterize(pil_img, 4 - level)
+  level = int_parameter(sample_level(level), 4)
+  return ImageOps.posterize(pil_img, 4 - level)
 
 
 def rotate(pil_img, level, _):
-    degrees = int_parameter(sample_level(level), 30)
-    if np.random.uniform() > 0.5:
-        degrees = -degrees
-    return pil_img.rotate(degrees, resample=Image.BILINEAR)
+  degrees = int_parameter(sample_level(level), 30)
+  if np.random.uniform() > 0.5:
+    degrees = -degrees
+  return pil_img.rotate(degrees, resample=Image.BILINEAR)
 
 
 def solarize(pil_img, level, _):
-    level = int_parameter(sample_level(level), 256)
-    return ImageOps.solarize(pil_img, 256 - level)
+  level = int_parameter(sample_level(level), 256)
+  return ImageOps.solarize(pil_img, 256 - level)
 
 
 def shear_x(pil_img, level, img_size):
-    level = float_parameter(sample_level(level), 0.3)
-    if np.random.uniform() > 0.5:
-        level = -level
-    return pil_img.transform(img_size,
-                             Image.AFFINE, (1, level, 0, 0, 1, 0),
-                             resample=Image.BILINEAR)
+  level = float_parameter(sample_level(level), 0.3)
+  if np.random.uniform() > 0.5:
+    level = -level
+  return pil_img.transform(img_size,
+                           Image.AFFINE, (1, level, 0, 0, 1, 0),
+                           resample=Image.BILINEAR)
 
 
 def shear_y(pil_img, level, img_size):
-    level = float_parameter(sample_level(level), 0.3)
-    if np.random.uniform() > 0.5:
-        level = -level
-    return pil_img.transform(img_size,
-                             Image.AFFINE, (1, 0, 0, level, 1, 0),
-                             resample=Image.BILINEAR)
+  level = float_parameter(sample_level(level), 0.3)
+  if np.random.uniform() > 0.5:
+    level = -level
+  return pil_img.transform(img_size,
+                           Image.AFFINE, (1, 0, 0, level, 1, 0),
+                           resample=Image.BILINEAR)
 
 
 def translate_x(pil_img, level, img_size):
-    level = int_parameter(sample_level(level), img_size[0] / 3)
-    if np.random.random() > 0.5:
-        level = -level
-    return pil_img.transform(img_size,
-                             Image.AFFINE, (1, 0, level, 0, 1, 0),
-                             resample=Image.BILINEAR)
+  level = int_parameter(sample_level(level), img_size[0] / 3)
+  if np.random.random() > 0.5:
+    level = -level
+  return pil_img.transform(img_size,
+                           Image.AFFINE, (1, 0, level, 0, 1, 0),
+                           resample=Image.BILINEAR)
 
 
 def translate_y(pil_img, level, img_size):
-    level = int_parameter(sample_level(level), img_size[1] / 3)
-    if np.random.random() > 0.5:
-        level = -level
-    return pil_img.transform(img_size,
-                             Image.AFFINE, (1, 0, 0, 0, 1, level),
-                             resample=Image.BILINEAR)
+  level = int_parameter(sample_level(level), img_size[1] / 3)
+  if np.random.random() > 0.5:
+    level = -level
+  return pil_img.transform(img_size,
+                           Image.AFFINE, (1, 0, 0, 0, 1, level),
+                           resample=Image.BILINEAR)
 
 
 # operation that overlaps with ImageNet-C's test set
@@ -122,10 +125,11 @@ def sharpness(pil_img, level, _):
     return ImageEnhance.Sharpness(pil_img).enhance(level)
 
 
+
+
 """
 Augmix with pillow
 """
-
 
 class AugMix:
     def __init__(self, mean, std, aug_list='augmentations_without_obj_translation', to_rgb=True, no_jsd=False):
@@ -161,8 +165,9 @@ class AugMix:
             self.aug_list = augmentations_all
         elif aug_list == 'copy':
             self.aug_list = aug_list
-        else:  # default = 'augmentations'
+        else: # default = 'augmentations'
             self.aug_list = augmentations
+
 
     def __call__(self, results):
 

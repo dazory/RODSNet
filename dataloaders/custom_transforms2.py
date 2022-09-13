@@ -27,6 +27,7 @@ else:
     Sequence = collections.abc.Sequence
     Iterable = collections.abc.Iterable
 
+
 # __all__ = ["Compose", "RandomSquareCropAndScale", "SetTargetSize",
 #            "LabelBoundaryTransform", "Tensor", "CropBlackArea", "RandomCrop_PIL",
 #            "ColorJitter", "FixedResize"]
@@ -41,9 +42,9 @@ _pil_interpolation_to_str = {
     pimg.BOX: 'PIL.Image.BOX',
 }
 
+
 RESAMPLE = pimg.BICUBIC
 RESAMPLE_D = pimg.BILINEAR
-
 
 def _get_image_size(img):
     if F._is_pil_image(img):
@@ -52,6 +53,7 @@ def _get_image_size(img):
         return img.shape[-2:][::-1]
     else:
         raise TypeError("Unexpected type {}".format(type(img)))
+
 
 
 class Compose(object):
@@ -84,6 +86,9 @@ class Compose(object):
         return format_string
 
 
+
+
+
 class Lambda(object):
     """Apply a user-defined lambda as a transform.
 
@@ -100,6 +105,8 @@ class Lambda(object):
 
     def __repr__(self):
         return self.__class__.__name__ + '()'
+
+
 
 
 class RandomCrop_PIL(object):
@@ -123,12 +130,11 @@ class RandomCrop_PIL(object):
                 sample['disp'] = ImageOps.expand(sample['disp'], border=(0, top_pad, right_pad, 0), fill=0)
 
             if 'pseudo_disp' in sample.keys():
-                sample['pseudo_disp'] = ImageOps.expand(sample['pseudo_disp'], border=(0, top_pad, right_pad, 0),
-                                                        fill=0)
+                sample['pseudo_disp'] = ImageOps.expand(sample['pseudo_disp'], border=(0, top_pad, right_pad, 0), fill=0)
 
             if 'label' in sample.keys():
                 sample['label'] = ImageOps.expand(sample['label'], border=(0, top_pad, right_pad, 0),
-                                                  fill=255)
+                                                        fill=255)
 
         else:
             assert self.img_height <= ori_height and self.img_width <= ori_width
@@ -328,11 +334,11 @@ class RandomSizedCrop(RandomResizedCrop):
     """
     Note: This transform is deprecated in favor of RandomResizedCrop.
     """
-
     def __init__(self, *args, **kwargs):
         warnings.warn("The use of the transforms.RandomSizedCrop transform is deprecated, " +
                       "please use transforms.RandomResizedCrop instead.")
         super(RandomSizedCrop, self).__init__(*args, **kwargs)
+
 
 
 class ColorJitter(object):
@@ -352,7 +358,6 @@ class ColorJitter(object):
             hue_factor is chosen uniformly from [-hue, hue] or the given [min, max].
             Should have 0<= hue <= 0.5 or -0.5 <= min <= max <= 0.5.
     """
-
     def __init__(self, brightness=0, contrast=0, saturation=0, hue=0):
         self.brightness = self._check_input(brightness, 'brightness')
         self.contrast = self._check_input(contrast, 'contrast')
@@ -436,10 +441,10 @@ class ColorJitter(object):
         return format_string
 
 
+
 class RandomSquareCropAndScale:
     def __init__(self, wh, mean, ignore_id, min=.5, max=2., class_incidence=None, class_instances=None,
-                 inst_classes=(3, 12, 14, 15, 16, 17, 18), scale_method=lambda scale, wh, size: int(scale * wh),
-                 new_crop=False):
+                 inst_classes=(3, 12, 14, 15, 16, 17, 18), scale_method=lambda scale, wh, size: int(scale * wh), new_crop=False):
         self.wh = wh
         self.min = min
         self.max = max
@@ -504,20 +509,17 @@ class RandomSquareCropAndScale:
         ret_dict['right'] = self._trans(right, crop_box, target_size, pad_size, RESAMPLE, self.mean)
 
         if 'label' in sample:
-            ret_dict['label'] = self._trans(sample['label'], crop_box, target_size, pad_size, pimg.NEAREST,
-                                            self.ignore_id)
+            ret_dict['label'] = self._trans(sample['label'], crop_box, target_size, pad_size, pimg.NEAREST, self.ignore_id)
         for k in ['image_prev', 'image_next']:
             if k in sample:
                 ret_dict[k] = self._trans(sample[k], crop_box, target_size, pad_size, RESAMPLE,
                                           self.mean)
         if 'disp' in sample:
             ret_dict['disp'] = crop_and_scale_disp(sample['disp'], crop_box, target_size, pad_size, RESAMPLE_D, 0)
-            ret_dict['disp_distance_weight'] = crop_and_scale_disp_loss_weight(sample['disp'], crop_box, target_size,
-                                                                               pad_size, RESAMPLE_D, 0)
+            ret_dict['disp_distance_weight'] = crop_and_scale_disp_loss_weight(sample['disp'], crop_box, target_size, pad_size, RESAMPLE_D, 0)
 
         if 'pseudo_disp' in sample:
-            ret_dict['pseudo_disp'] = crop_and_scale_disp(sample['pseudo_disp'], crop_box, target_size, pad_size,
-                                                          RESAMPLE_D, 0)
+            ret_dict['pseudo_disp'] = crop_and_scale_disp(sample['pseudo_disp'], crop_box, target_size, pad_size, RESAMPLE_D, 0)
 
         if 'flow' in sample:
             ret_dict['flow'] = crop_and_scale_flow(sample['flow'], crop_box, target_size, pad_size, scale)
@@ -536,7 +538,7 @@ def crop_and_scale_disp(img: pimg, crop_box, target_size, pad_size, resample, bl
     target.paste(img)
     tmp = target.crop(crop_box)
     # res = tmp.resize(target_size, resample=resample)
-    res = tmp.resize(target_size, resample=resample).point(lambda i: i * (target_size[0] / tmp.size[0]))
+    res = tmp.resize(target_size, resample=resample).point(lambda i: i * (target_size[0]/tmp.size[0]))
     return res
 
 
@@ -545,7 +547,7 @@ def crop_and_scale_disp_loss_weight(img: pimg, crop_box, target_size, pad_size, 
     target.paste(img)
     tmp = target.crop(crop_box)
     # res = tmp.resize(target_size, resample=resample)
-    res = tmp.resize(target_size, resample=resample)  # focal_length & disparity
+    res = tmp.resize(target_size, resample=resample)        # focal_length & disparity
     disp = np.array(res)
     depth_range = [20, 40, 60, 80, 100]
     disp_weight = np.ones(disp.shape, dtype=np.float32)
@@ -561,6 +563,7 @@ def crop_and_scale_disp_loss_weight(img: pimg, crop_box, target_size, pad_size, 
         else:
             disp_mask = (disp >= 483 / d_range) & (disp < (483 / (d_range - 20)))
         disp_weight[disp_mask] = disp_weight_value[str(d_range)]
+
 
     return disp_weight
 
@@ -581,8 +584,7 @@ class FixedResize(object):
     def __call__(self, sample):
         if 'disp' in sample.keys():
             assert sample['left'].size == sample['disp'].size
-            sample['disp'] = sample['disp'].resize(self.size, Image.BILINEAR).point(
-                lambda i: i * (self.size[0] / sample['disp'].width))
+            sample['disp'] = sample['disp'].resize(self.size, Image.BILINEAR).point(lambda i: i * (self.size[0] / sample['disp'].width))
 
         if 'label' in sample.keys():
             assert sample['left'].size == sample['label'].size
@@ -631,9 +633,8 @@ class CropBlackArea:
 
         sample['left'] = sample['left'].resize((width, height), Image.BILINEAR)
         sample['right'] = sample['right'].resize((width, height), Image.BILINEAR)
-        sample['disp'] = sample['disp'].resize((width, height), Image.BILINEAR).point(
-            lambda i: i * (width / (right - left)))
-        sample['label'] = sample['label'].resize((width, height), Image.NEAREST)
+        sample['disp'] = sample['disp'].resize((width,height), Image.BILINEAR).point(lambda i: i * (width/(right - left)))
+        sample['label'] = sample['label'].resize((width,height), Image.NEAREST)
 
         # if (np.where(np.array(sample['label']) == 19)[0].size != 0):
         #     global h_max, h_min, w_max, w_min
@@ -650,6 +651,7 @@ class CropBlackArea:
         #     if (w_min > w_min_):
         #         w_min = w_min_
         #     print("obstacles bbox : ({},{}), ({}, {})".format(h_min, w_min, h_max, w_max))
+
 
         return sample
 
@@ -703,7 +705,7 @@ class Tensor:
 
     def __call__(self, example):
         ret_dict = {}
-        for k in ['left', 'right', 'left_aug1', 'left_aug2', 'right_aug1', 'right_aug2']:
+        for k in ['left', 'right',  'left_aug1', 'left_aug2', 'right_aug1', 'right_aug2']:
             if k in example:
                 ret_dict[k] = example[k]
         if 'disp' in example:
