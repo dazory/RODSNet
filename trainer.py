@@ -139,13 +139,15 @@ class Trainer(InitOpts):
                 print_cycle = 0.0
                 data_cycle = 0.0
 
+            output = self.performance_check_train(disp_loss, total_loss, pred_disp, gt_disp, mask, score=None)
+            self.wandb_logger.after_train_iter(output)
+
             last_data_time = time.time()
             del total_loss, sample
 
-            self.wandb_logger.after_train_iter()
-
         train_epoch_loss = train_epoch_loss / num_img_tr
         self.writer.add_scalar('train/total_loss_epoch', train_epoch_loss, self.cur_epochs)
+        self.wandb_logger.after_train_epoch(dict(total_loss_epoch=train_epoch_loss))
 
     def validate(self):
         """Do validation and return specified samples"""
@@ -287,7 +289,9 @@ class Trainer(InitOpts):
                     img_id += 1
 
                 start = time.time()
-                self.wandb_logger.after_val_iter()
+                self.wandb_logger.after_val_iter(dict(dataloader_time=data_time, time=fwt,
+                                                      eval_metric_time_per_batch=metric_end-metric_start,
+                                                      ))
             del sample
 
         # test validation performance
@@ -301,7 +305,7 @@ class Trainer(InitOpts):
             mean_thres2 = val_thres2 / valid_samples
             mean_thres3 = val_thres3 / valid_samples
 
-        self.performance_test(score, mean_epe, mean_d1, mean_thres1, mean_thres2, mean_thres3)
+        output = self.performance_test(score, mean_epe, mean_d1, mean_thres1, mean_thres2, mean_thres3)
 
         if not self.opts.test_only:
             self.save_checkpoints(mean_epe, score)
@@ -337,6 +341,8 @@ class Trainer(InitOpts):
                         self.save_checkpoints(mean_epe, score, is_best=True, best_type='epe')
                     print('best epe epoch: {}, best epe: {}'.format(self.best_epe_epoch, self.best_epe))
 
+        self.wandb_logger.after_val_epoch(output)
+
     def test(self):
         self.validate()
 
@@ -362,11 +368,17 @@ class Trainer(InitOpts):
         }, is_best, best_type)
 
     def performance_check_train(self, disp_loss, total_loss, pred_disp, gt_disp, mask, score):
-        if self.opts.train_semantic and self.opts.dataset != 'kitti_mix':
+        output = dict()
+        if self.opts.train_semantic and self.opts.dataset != 'kitti_mix' and score is not None:
             self.writer.add_scalar('train/mIoU', score["Mean IoU"], self.num_iter)
             self.writer.add_scalar('train/OverallAcc', score["Overall Acc"], self.num_iter)
             self.writer.add_scalar('train/MeanAcc', score["Mean Acc"], self.num_iter)
             self.writer.add_scalar('train/fwIoU', score["FreqW Acc"], self.num_iter)
+            output['mIoU'] = score["Mean IoU"]
+            output['OverallAcc'] = score["Overall Acc"]
+            output['MeanAcc'] = score["Mean Acc"]
+            output['fwIoU'] = score["FreqW Acc"]
+
 
         if self.opts.train_disparity:
             # pred_disp = pred_disp.squeeze(1)
@@ -375,6 +387,9 @@ class Trainer(InitOpts):
             self.writer.add_scalar('train/epe', epe.item(), self.num_iter)
             self.writer.add_scalar('train/disp_loss', disp_loss.item(), self.num_iter)
             self.writer.add_scalar('train/total_loss', total_loss.item(), self.num_iter)
+            output['epe'] = epe.item()
+            output['disp_loss'] = disp_loss.item()
+            output['total_loss'] = total_loss.item()
 
             d1 = d1_metric(pred_disp, gt_disp, mask)
             self.writer.add_scalar('train/d1', d1.item(), self.num_iter)
@@ -384,9 +399,15 @@ class Trainer(InitOpts):
             self.writer.add_scalar('train/thres1', thres1.item(), self.num_iter)
             self.writer.add_scalar('train/thres2', thres2.item(), self.num_iter)
             self.writer.add_scalar('train/thres3', thres3.item(), self.num_iter)
+            output['thres1'] = thres1.item()
+            output['thres2'] = thres2.item()
+            output['thres3'] = thres3.item()
+
+        return output
 
 
     def performance_test(self, val_score, mean_epe, mean_d1, mean_thres1, mean_thres2, mean_thres3):
+        output = dict()
         print('Validation:')
         print('[Epoch: %d]' % (self.cur_epochs))
 
@@ -406,6 +427,11 @@ class Trainer(InitOpts):
                 self.writer.add_scalar('val/fwIoU', FWIoU, self.cur_epochs)
 
             print(self.evaluator.to_str(val_score))
+            output['Acc'] = Acc
+            output['Acc_class'] = Acc_class
+            output['mIoU'] = mIoU
+            output['obs_mIoU'] = obs_mIoU
+            output['FWIoU'] = FWIoU
         else:
             mIoU, Acc, Acc_class, FWIoU = 0, 0, 0, 0
 
@@ -416,6 +442,11 @@ class Trainer(InitOpts):
                 self.writer.add_scalar('val/thres1', mean_thres1, self.cur_epochs)
                 self.writer.add_scalar('val/thres2', mean_thres2, self.cur_epochs)
                 self.writer.add_scalar('val/thres3', mean_thres3, self.cur_epochs)
+                output['epe'] = mean_epe
+                output['d1'] = mean_d1
+                output['thres1'] = mean_thres1
+                output['thres2'] = mean_thres2
+                output['thres3'] = mean_thres3
 
         self.saver.save_val_results(self.cur_epochs, mean_epe, mean_d1,
                                     mean_thres1, mean_thres2, mean_thres3,
@@ -474,6 +505,14 @@ class Trainer(InitOpts):
             with open(save_filename, 'a') as f:
                 f.write('depth: 80~100m ')
                 f.write('20 class mIoU: {} \n'.format(mIoU_80_100))
+
+            output['mIoU_0_20'] = mIoU_0_20
+            output['mIoU_20_40'] = mIoU_20_40
+            output['mIoU_40_60'] = mIoU_40_60
+            output['mIoU_60_80'] = mIoU_60_80
+            output['mIoU_80_100'] = mIoU_80_100
+
+        return output
 
     def calculate_disparity_error(self, pred_disp, gt_disp, mask,
                                   val_epe, val_d1, val_thres1, val_thres2, val_thres3):
@@ -729,4 +768,4 @@ class Trainer(InitOpts):
         return pred_disp
 
     def set_wandb_logger(self, logger):
-        self.wandb_logger = logger
+        self.wandb_logger = logger 
