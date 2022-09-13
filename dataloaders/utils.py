@@ -7,6 +7,7 @@ from torch.utils.data.dataloader import default_collate
 from dataloaders.datasets import Cityscapes, CityLostFound, LostFound
 # from dataloaders import custom_transforms as sw
 from dataloaders import custom_transforms2 as sw
+from dataloaders import augmix
 
 def get_dataset(opts):
     """ Dataset And Augmentation
@@ -29,7 +30,8 @@ def get_dataset(opts):
              sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb),
              sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
              sw.LabelBoundaryTransform(num_classes=opts.num_classes, reduce=True),
-             sw.Tensor(),
+             augmix.AugMix(mean, std),
+             sw.Tensor()
              ]
         )
 
