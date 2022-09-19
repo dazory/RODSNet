@@ -25,21 +25,17 @@ def get_dataset(opts):
         target_size = (opts.val_img_width, opts.val_img_height)
         target_size_feats = (opts.val_img_width // 4, opts.val_img_height // 4)
 
-        train_transform = sw.Compose(
-            [
-             sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb),
-             sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
-             sw.LabelBoundaryTransform(num_classes=opts.num_classes, reduce=True),
-             augmix.AugMix(mean, std),
-             sw.Tensor()
-             ]
-        )
+        train_transform_list = [sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb),
+                                sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
+                                sw.LabelBoundaryTransform(num_classes=opts.num_classes, reduce=True),
+                                sw.Tensor()]
+        val_transform_list = [sw.FixedResize(target_size),
+                              sw.Tensor()]
+        if opts.augmix:
+            train_transform_list.insert(-2, augmix.AugMix(mean, std, opts.aug_list, opts.to_rgb, opts.no_jsd))
 
-        val_transform = sw.Compose(
-            [sw.FixedResize(target_size),
-             sw.Tensor(),
-             ]
-        )
+        train_transform = sw.Compose(train_transform_list)
+        val_transform = sw.Compose(val_transform_list)
 
         train_dst = Cityscapes(root=opts.data_root, dataset_name=opts.dataset,
                                mode='train', transform=train_transform, opts=opts)
@@ -62,37 +58,20 @@ def get_dataset(opts):
         target_size = (opts.val_img_width, opts.val_img_height)
         target_size_feats = (opts.val_img_width // 4, opts.val_img_height // 4)
 
+        train_transform_list = [sw.CropBlackArea(),
+                                # sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb, min=.8, max=1.0),
+                                sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb, min=min_, max=max_, new_crop=new_crop),
+                                sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
+                                sw.LabelBoundaryTransform(num_classes=opts.num_classes, reduce=True),
+                                sw.Tensor(),]
+        val_transform_list = [sw.CropBlackArea(),
+                              sw.FixedResize(target_size),
+                              sw.Tensor(),]
         if opts.augmix:
-            train_transform = sw.Compose(
-                [
-                    sw.CropBlackArea(),
-                    # sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb, min=.8, max=1.0),
-                    sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb, min=min_, max=max_, new_crop=new_crop),
-                    sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
-                    sw.LabelBoundaryTransform(num_classes=opts.num_classes, reduce=True),
-                    augmix.AugMix(mean, std),
-                    sw.Tensor(),
-                ]
-            )
-        else:
-            train_transform = sw.Compose(
-                [
-                    sw.CropBlackArea(),
-                    # sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb, min=.8, max=1.0),
-                    sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb, min=min_, max=max_,
-                                                new_crop=new_crop),
-                    sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
-                    sw.LabelBoundaryTransform(num_classes=opts.num_classes, reduce=True),
-                    sw.Tensor(),
-                ]
-            )
+            train_transform_list.insert(-2, augmix.AugMix(mean, std, opts.aug_list, opts.to_rgb, opts.no_jsd))
 
-        val_transform = sw.Compose(
-            [sw.CropBlackArea(),
-             sw.FixedResize(target_size),
-             sw.Tensor(),
-             ]
-        )
+        train_transform = sw.Compose(train_transform_list)
+        val_transform = sw.Compose(val_transform_list)
 
         if opts.not_md_fusion:
             train_dst = LostFound(root=opts.data_root, dataset_name=opts.dataset,
@@ -114,23 +93,20 @@ def get_dataset(opts):
         target_size = (1280, 384)
         target_size_feats = (1280 // 4, 384 // 4)
 
-        train_transform = transforms.Compose(
-            [   # sw.PadImage(size=(1280, 384)),
-                sw.RandomCrop_PIL(256, 896),
-                sw.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5),
-                # sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb),
-                sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
-                sw.LabelBoundaryTransform(num_classes=opts.num_classes, reduce=True),
-                sw.Tensor(),
-            ]
-        )
+        train_transform_list = [# sw.PadImage(size=(1280, 384)),
+                                sw.RandomCrop_PIL(256, 896),
+                                sw.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5),
+                                # sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb),
+                                sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
+                                sw.LabelBoundaryTransform(num_classes=opts.num_classes, reduce=True),
+                                sw.Tensor()]
+        val_transform_list = [sw.RandomCrop_PIL(384, 1280, validate=True),
+                              sw.Tensor(),]
+        if opts.augmix:
+            train_transform_list.insert(-2, augmix.AugMix(mean, std, opts.aug_list, opts.to_rgb, opts.no_jsd))
 
-        val_transform = transforms.Compose(
-            [
-                sw.RandomCrop_PIL(384, 1280, validate=True),
-                sw.Tensor(),
-             ]
-        )
+        train_transform = sw.Compose(train_transform_list)
+        val_transform = sw.Compose(val_transform_list)
 
         train_dst = Cityscapes(root=opts.data_root, dataset_name=opts.dataset,
                                mode='train', transform=train_transform, opts=opts)
@@ -144,22 +120,19 @@ def get_dataset(opts):
         target_size = (1280, 384)
         target_size_feats = (1280 // 4, 384 // 4)
 
-        train_transform = transforms.Compose(
-            [  # sw.PadImage(size=(1280, 384)),
-                sw.RandomCrop_PIL(256, 1152),
-                sw.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5),
-                # sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb),
-                sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
-                sw.Tensor(),
-            ]
-        )
+        train_transform_list = [# sw.PadImage(size=(1280, 384)),
+                                sw.RandomCrop_PIL(256, 1152),
+                                sw.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5),
+                                # sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb),
+                                sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
+                                sw.Tensor(),]
+        val_transform_list = [sw.RandomCrop_PIL(384, 1280, validate=True),
+                              sw.Tensor(),]
+        if opts.augmix:
+            train_transform_list.insert(-2, augmix.AugMix(mean, std, opts.aug_list, opts.to_rgb, opts.no_jsd))
 
-        val_transform = transforms.Compose(
-            [
-             sw.RandomCrop_PIL(384, 1280, validate=True),
-             sw.Tensor(),
-             ]
-        )
+        train_transform = sw.Compose(train_transform_list)
+        val_transform = sw.Compose(val_transform_list)
 
         train_dst = Cityscapes(root=opts.data_root, dataset_name=opts.dataset,
                                mode='train', transform=train_transform, opts=opts)
@@ -181,20 +154,16 @@ def get_dataset(opts):
         target_size = (960, 540)
         target_size_feats = (960 // 4, 540 // 4)
 
-        train_transform = sw.Compose(
-            [
-                sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb),
-                sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
-                sw.Tensor(),
-            ]
-        )
+        train_transform_list = [sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb),
+                                sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
+                                sw.Tensor(),]
+        val_transform_list = [sw.FixedResize((896, 512)),
+                              sw.Tensor(),]
+        if opts.augmix:
+            train_transform_list.insert(-2, augmix.AugMix(mean, std, opts.aug_list, opts.to_rgb, opts.no_jsd))
 
-        val_transform = sw.Compose(
-            [
-             sw.FixedResize((896, 512)),
-             sw.Tensor(),
-             ]
-        )
+        train_transform = sw.Compose(train_transform_list)
+        val_transform = sw.Compose(val_transform_list)
 
         train_dst = Cityscapes(root=opts.data_root, dataset_name=opts.dataset,
                                mode='train', transform=train_transform, opts=opts)

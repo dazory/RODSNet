@@ -172,13 +172,22 @@ class AugMix:
     def __call__(self, results):
 
         if self.no_jsd:
-            img = results['img'].copy()
-            return self.aug(img)
+            results['left'] = np.array(results['left'], np.float32)
+            results['right'] = np.array(results['right'], np.float32)
+            img_left = results['left'].copy()
+            img_right = results['right'].copy()
+            results['left'] = self.aug(img_left)
+            results['right'] = self.aug(img_right)
+            return results
         elif self.aug_list == 'copy':
-            img = results['img'].copy()
-            results['img2'] = img.copy()
-            results['img3'] = img.copy()
-            results['img_fields'] = ['img', 'img2', 'img3']
+            results['left'] = np.array(results['left'], np.float32)
+            results['right'] = np.array(results['right'], np.float32)
+            img_left = results['left'].copy()
+            img_right = results['right'].copy()
+            results['left_aug1'] = img_left.copy()
+            results['left_aug2'] = img_left.copy()
+            results['right_aug1'] = img_right.copy()
+            results['right_aug2'] = img_right.copy()
             return results
         else:
             results['left'] = np.array(results['left'], np.float32)
