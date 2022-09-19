@@ -121,8 +121,8 @@ class Trainer(InitOpts):
             else:
                 raise NotImplementedError
 
-            interval_loss += total_loss
-            train_epoch_loss += total_loss
+            interval_loss += float(total_loss)
+            train_epoch_loss += float(total_loss)
 
             total_loss.backward()
             self.optimizer.step()
