@@ -9,8 +9,28 @@ from utils.wandb_logger import WandbLogger
 
 
 def parse_wandb_init_kwargs(opt):
+    def get_name(opt):
+        name = ''
+        # Augmentation type
+        if opt.augmix:
+            name += f'augmix.{opt.aug_list}'
+        else:
+            name += f'original'
+
+        # Additional loss
+        if opt.jsd:
+            name += f'_jsd'
+        else:
+            name += f'_none'
+
+        # Train learning options
+        name += '_lr.{:.0e}.{:.0e}'.format(opt.lr, opt.last_lr)
+        name += '_wd.{:.0e}'.format(opt.weight_decay)
+        name += f'_e{opt.epochs}'
+
+        return name
     wandb_init_kwargs = dict(project="RODSNet", entity="kaist-url-ai28",
-                             name=f"{opt.dataset}-{opt.model}-e{opt.epochs}",
+                             name=get_name(opt),
                              config=dict(dataset=f"{opt.dataset}",
                                          model=f"{opt.model}",
                                          epochs=f"{opt.epochs}"))
