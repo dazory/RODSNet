@@ -708,6 +708,19 @@ class Tensor:
         for k in ['left', 'right',  'left_aug1', 'left_aug2', 'right_aug1', 'right_aug2']:
             if k in example:
                 ret_dict[k] = example[k]
+        if 'left' in example:
+            ret_dict['left'] = self._trans(example['left'], np.float32)
+        if 'right' in example:
+            ret_dict['right'] = self._trans(example['right'], np.float32)
+        if 'left_aug1' in example:
+            ret_dict['left_aug1'] = self._trans(example['left_aug1'], np.float32)
+        if 'left_aug2' in example:
+            ret_dict['left_aug2'] = self._trans(example['left_aug2'], np.float32)
+        if 'right_aug1' in example:
+            ret_dict['right_aug1'] = self._trans(example['right_aug1'], np.float32)
+        if 'right_aug2' in example:
+            ret_dict['right_aug2'] = self._trans(example['right_aug2'], np.float32)
+
         if 'disp' in example:
             ret_dict['disp'] = self._trans(example['disp'], np.float32)
         if 'pseudo_disp' in example:

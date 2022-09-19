@@ -62,16 +62,30 @@ def get_dataset(opts):
         target_size = (opts.val_img_width, opts.val_img_height)
         target_size_feats = (opts.val_img_width // 4, opts.val_img_height // 4)
 
-        train_transform = sw.Compose(
-            [
-                sw.CropBlackArea(),
-                # sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb, min=.8, max=1.0),
-                sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb, min=min_, max=max_, new_crop=new_crop),
-                sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
-                sw.LabelBoundaryTransform(num_classes=opts.num_classes, reduce=True),
-                sw.Tensor(),
-            ]
-        )
+        if opts.augmix:
+            train_transform = sw.Compose(
+                [
+                    sw.CropBlackArea(),
+                    # sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb, min=.8, max=1.0),
+                    sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb, min=min_, max=max_, new_crop=new_crop),
+                    sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
+                    sw.LabelBoundaryTransform(num_classes=opts.num_classes, reduce=True),
+                    augmix.AugMix(mean, std),
+                    sw.Tensor(),
+                ]
+            )
+        else:
+            train_transform = sw.Compose(
+                [
+                    sw.CropBlackArea(),
+                    # sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb, min=.8, max=1.0),
+                    sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb, min=min_, max=max_,
+                                                new_crop=new_crop),
+                    sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
+                    sw.LabelBoundaryTransform(num_classes=opts.num_classes, reduce=True),
+                    sw.Tensor(),
+                ]
+            )
 
         val_transform = sw.Compose(
             [sw.CropBlackArea(),
