@@ -182,6 +182,8 @@ class Options:
         self.parser.add_argument('--without_depth_range_miou', action='store_true', help='not apply depth_range_miou')
 
     def _ai28_options(self):
+        self.parser.add_argument('--augmix', action='store_true',
+                                 help='Use AugMix')
         self.parser.add_argument('--jsd', action='store_true',
                                  help='Use additional loss = jsd')
         # Log
