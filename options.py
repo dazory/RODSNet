@@ -193,6 +193,8 @@ class Options:
         # Additional Loss
         self.parser.add_argument('--jsd', action='store_true',
                                  help='Use additional loss = jsd')
+        self.parser.add_argument('--additional_weight', type=float, default=10.0,
+                                 help='lambda weight will be multiplied by additional loss.')
         # Log
         self.parser.add_argument('--wandb', action='store_true',
                                  help='Use wandb logger')

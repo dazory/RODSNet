@@ -73,6 +73,27 @@ class Trainer(InitOpts):
                 pseudo_gt_disp = sample['pseudo_disp'].to(self.device)
                 pseudo_mask = (pseudo_gt_disp > 0) & (pseudo_gt_disp < self.opts.max_disp) & (~mask)
 
+            # concatenate augmented version to original data.
+            # n_views is set to the number of total data(original+augmented)
+            n_views = 1
+            for left_key in ['left_aug1', 'left_aug2']:
+                if left_key in sample:
+                    left = torch.cat([left, sample[left_key].to(self.device, dtype=torch.float32)], dim=0)
+                    n_views += 1
+            for right_key in ['right_aug1', 'right_aug2']:
+                if right_key in sample:
+                    right = torch.cat([right, sample[right_key].to(self.device, dtype=torch.float32)], dim=0)
+            assert left.shape[0] == right.shape[0]
+            assert left.shape[0] % n_views == 0
+            if 'label' in sample.keys():
+                labels = labels.repeat(n_views, 1, 1)
+            if 'disp' in sample.keys():
+                gt_disp = gt_disp.repeat(n_views, 1, 1)
+                mask = mask.repeat(n_views, 1, 1)
+            if 'pseudo_disp' in sample.keys():
+                pseudo_gt_disp = pseudo_gt_disp.repeat(n_views, 1, 1)
+                pseudo_mask = pseudo_mask.repeat(n_views, 1, 1)
+
             self.optimizer.zero_grad()
 
             if self.opts.train_semantic and self.opts.train_disparity:
@@ -89,10 +110,14 @@ class Trainer(InitOpts):
                 if self.opts.dataset == 'kitti_mix':
                     loss2 = 0
                 else:
-                    loss2 = self.criterion(left_seg, labels, sample)
+                    loss2 = self.criterion(torch.chunk(left_seg, n_views, dim=0)[0],
+                                           torch.chunk(labels, n_views, dim=0)[0],
+                                           sample)
 
-                if self.opts.jsd:
-                    loss2 += self.additional_criterion(left_seg, labels, sample)
+                if self.additional_criterion is None:
+                    additional_loss = 0.0
+                else:
+                    additional_loss = self.additional_criterion(left_seg, labels, sample, n_views=n_views)
 
                 pred_disp = self.resize_pred_disp(pred_disp, gt_disp)
                 if 'pseudo_disp' in sample.keys() and self.opts.load_pseudo_gt:
@@ -101,7 +126,9 @@ class Trainer(InitOpts):
                                  (loss2 * self.opts.sem_weight) + \
                                  pseudo_curr_loss * self.opts.pseudo_disp_weight
                 else:
-                    total_loss = (disp_loss * self.opts.disp_weight) + (loss2 * self.opts.sem_weight)
+                    total_loss = (disp_loss * self.opts.disp_weight) \
+                                 + (loss2 * self.opts.sem_weight) \
+                                 + (additional_loss * self.opts.additional_weight)
 
             elif self.opts.train_semantic and not self.opts.train_disparity:
                 left_seg = self.model(left, right)
@@ -140,6 +167,7 @@ class Trainer(InitOpts):
                 data_cycle = 0.0
 
             output = self.performance_check_train(disp_loss, total_loss, pred_disp, gt_disp, mask, score=None)
+            output['additional_loss'] = float(additional_loss)
             self.wandb_logger.after_train_iter(output)
 
             last_data_time = time.time()

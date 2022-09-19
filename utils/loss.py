@@ -260,7 +260,7 @@ class JSDLoss(nn.Module):
         self.device =device
         self.otps = opts
 
-    def forward(self, input, target, batch, **kwargs):
+    def forward(self, input, target, batch, n_views, **kwargs):
         '''
         [Input]
         input:      (1, num_classes, H, W) e.g., (1,20,768,768)
@@ -277,40 +277,34 @@ class JSDLoss(nn.Module):
                         alphas = {list:1} = [-1]
                         target_level = {int} 0
         '''
+        assert target.shape[0] % n_views == 0
+        if n_views != 3:
+            raise ValueError(f'n_views is only supported as 3,'
+                             f'but got {n_views}.')
         if input.shape[-2:] != target.shape[-2:]:
             input = upsample(input, target.shape[-2:])
-        B, H, W = target.shape
-        # TODO: Make it allow other batch size.
-        if B is not 3:
-            raise ValueError(f"Only support batch size = 3, which consists of orig, aug1 and aug2,"
-                             f"but got {B}.")
+        B, num_classes, H, W = int(input.shape[0] / n_views), input.shape[1], input.shape[2], input.shape[3]
 
         target[target == self.ignore_id] = 0
 
         if input.dim() > 2:
-            input = input.view(input.size(0), input.size(1), -1)    # (B,num_classes,H,W) → (B,num_classes,H*W)
-            input = input.transpose(1, 2)                           # (B,num_classes,H*W) → (B,H*W,num_classes)
-            input = input.contiguous().view(-1, input.size(2))      # (B,H*W,num_classes) → (B*H*W,num_classes)
-        target = target.view(-1, 1)                                 # (B,H,W) → (B*H*W, 1)
-        weight = self.weight[target].view(-1).to(self.device)       # (B,H,W) → (B*H*W,)
+            input = input.reshape(n_views, B, num_classes, H*W)         # (n_views*B,num_classes,H,W) → (n_views,B,num_classes,H*W)
+            input = input.transpose(2, 3)                               # (n_views,B,num_classes,H*W) → (n_views,B,H*W,num_classes)
+            input = input.contiguous().reshape(n_views, -1, num_classes)# (n_views,B,H*W,num_classes) → (n_views,B*H*W,num_classes)
+        target = target.reshape(n_views, B*H*W, 1)                      # (n_views*B,H,W) → (n_views,B*H*W, 1)
+        weight = self.weight[target[0]].reshape(B*H*W).to(self.device)  # (n_views,B*H*W,1) → (B*H*W,)
 
         logpt = F.log_softmax(input, dim=-1)
-        logpt = logpt.gather(1, target)                             # (B*H*W,1) : (-1, 20)에서 dim=1에 대해 [target]번째 인덱스값만 파싱
-        logpt = logpt.view(-1)                                      # (B*H*W,)
-        pt = logpt.detach().exp()                                   # (B*H*W,)
+        logpt = logpt.gather(-1, target)        # (n_views,B*H*W,num_classes) → (n_views,B*H*W,1): (n_views, -1, 20)에서 dim=-1에 대해 [target]번째 인덱스값만 파싱
+        logpt = logpt.reshape(n_views, -1)      # (n_views,B*H*W)
+        pt = logpt.detach().exp()               # (n_views,B*H*W)
 
-        # TODO: Simple JSD suppose input batch be three, which contains orig, aug1 and aug2.
-        pt_orig, pt_aug1, pt_aug2 = torch.chunk(pt, 3)
-        pt_orig, pt_aug1, pt_aug2 = pt_orig.view(-1, 1), pt_aug1.view(-1, 1), pt_aug2.view(-1, 1)
-
+        pt_orig, pt_aug1, pt_aug2 = pt[0].view(-1, 1), pt[1].view(-1, 1), pt[2].view(-1, 1)
         pt_mixture = torch.clamp((pt_orig + pt_aug1 + pt_aug2) / 3., 1e-7, 1).log()
         loss = (F.kl_div(pt_mixture, pt_orig, reduction='none') +
                 F.kl_div(pt_mixture, pt_aug1, reduction='none') +
                 F.kl_div(pt_mixture, pt_aug2, reduction='none')) / 3.
-
-        # TODO: (WARN) Only use the weight for orig, not aug1 or aug2.
-        weight, _, _ = torch.chunk(weight, 3)
-        weight = weight.view(-1, 1)
+        weight = weight.view(-1, 1)             # (B*H*W, 1)
         assert loss.shape == weight.shape
 
         N = weight.sum()
@@ -318,8 +312,5 @@ class JSDLoss(nn.Module):
         loss = weight * loss
         loss = loss.sum()
         loss = loss / N
-
-        lambda_weight = 1.0
-        loss = lambda_weight * loss
 
         return loss

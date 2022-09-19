@@ -224,6 +224,8 @@ class InitOpts():
                 self.additional_criterion = JSDLoss(num_classes=self.opts.num_classes,
                                                     ignore_id=255, weight=weight, device=self.device,
                                                     opts=self.opts)
+            else:
+                self.additional_criterion = None
 
         # disparity Loss weights
         self.pyramid_weight = {
