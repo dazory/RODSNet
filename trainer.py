@@ -768,4 +768,4 @@ class Trainer(InitOpts):
         return pred_disp
 
     def set_wandb_logger(self, logger):
-        self.wandb_logger = logger 
+        self.wandb_logger = logger
