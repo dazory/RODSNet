@@ -1,8 +1,8 @@
 import numpy as np
 from numpy import random
 from PIL import Image
-
-
+from torchvision import transforms
+import torch
 
 
 
@@ -132,7 +132,7 @@ Augmix with pillow
 """
 
 class AugMix:
-    def __init__(self, mean, std, aug_list='augmentations_without_obj_translation', to_rgb=True, no_jsd=False):
+    def __init__(self, mean, std, normalize, aug_list='augmentations_without_obj_translation', to_rgb=True, no_jsd=False):
         self.mean = np.array(mean, dtype=np.float32)
         self.std = np.array(std, dtype=np.float32)
         self.to_rgb = to_rgb
@@ -144,6 +144,7 @@ class AugMix:
         self.aug_severity = 1
 
         self.no_jsd = no_jsd
+        self.normalize = normalize
 
         augmentations = [
             autocontrast, equalize, posterize, rotate, solarize, shear_x, shear_y,
@@ -198,15 +199,10 @@ class AugMix:
             results['left_aug2'] = self.aug(img_left)
             results['right_aug1'] = self.aug(img_right)
             results['right_aug2'] = self.aug(img_right)
+            return results
 
-            """ verification
-            a4 = Image.fromarray(img_left.astype(np.uint8))
-            a4.save("babo.jpeg")
-            a5 = Image.fromarray(results['left_aug1'].astype(np.uint8))
-            a5.save("babo_aug1.jpeg")
-            a6 = Image.fromarray(results['left_aug2'].astype(np.uint8))
-            a6.save("babo_aug2.jpeg")
-            """
+
+
             # ''' Save the result '''
             # img_orig = Image.fromarray(results['img'])
             # img_orig.save('/ws/external/data/augmix_orig.png')
@@ -223,13 +219,21 @@ class AugMix:
             # img_augmix2 = Image.fromarray(img_augmix2)
             # img_augmix2.save('/ws/external/data/augmix_2.png')
 
-            return results
-        # return self.aug(results)
+
+
 
     def __repr__(self):
         repr_str = self.__class__.__name__
         repr_str += f'(mean={self.mean}, std={self.std}, to_rgb={self.to_rgb})'
         return repr_str
+
+
+    def do_normalize(self, img_array):   #img_array type: np.array
+        img_array = np.array(img_array, dtype=np.uint8)
+        img_tensor = transforms.ToTensor()(img_array)
+        normalize_img = transforms.Normalize((0.28689554,0.32513303,0.28389177),(0.18696375,0.19017339,0.18720214))(img_tensor) #cityscapes mean,std
+        return normalize_img
+
 
     def aug(self, img):
         ws = np.float32(
@@ -238,20 +242,58 @@ class AugMix:
         IMAGE_HEIGHT, IMAGE_WIDTH, _ = img.shape
         img_size = (IMAGE_WIDTH, IMAGE_HEIGHT)
 
-        # image_aug = img.copy()
-        mix = np.zeros_like(img.copy(), dtype=np.float32)
-        for i in range(self.mixture_width):
-            image_aug = Image.fromarray(img.copy(), "RGB")
-            depth = self.mixture_depth if self.mixture_depth > 0 else np.random.randint(1, 4)
-            for _ in range(depth):
-                op = np.random.choice(self.aug_list)
-                image_aug = op(image_aug, self.aug_severity, img_size)
-            # Preprocessing commutes since all coefficients are convex
-            image_aug = np.asarray(image_aug, dtype=np.float32)
-            mix += ws[i] * image_aug
-        mixed = (1 - m) * img + m * mix
-        mixed = np.trunc(mixed)
-        return mixed
+
+
+        if self.normalize:
+            img_tensor = np.transpose(img.copy(),(2,0,1))
+            img_tensor = torch.Tensor(img_tensor)
+            mix = torch.zeros_like(img_tensor)
+            for i in range(self.mixture_width):
+                image_aug = Image.fromarray(img.copy(), "RGB")
+                depth = self.mixture_depth if self.mixture_depth > 0 else np.random.randint(1, 4)
+                for _ in range(depth):
+                    op = np.random.choice(self.aug_list)
+                    image_aug = op(image_aug, self.aug_severity, img_size)
+                # Preprocessing commutes since all coefficients are convex
+
+                mix += ws[i] * self.do_normalize(image_aug)
+            mixed = (1 - m) * self.do_normalize(img) + m * mix
+
+            return mixed
+
+        # if self.normalize:
+        #     mix = np.zeros_like(img.copy(), dtype=np.float32)
+        #     for i in range(self.mixture_width):
+        #         image_aug = Image.fromarray(img.copy(), "RGB")
+        #         depth = self.mixture_depth if self.mixture_depth > 0 else np.random.randint(1, 4)
+        #         for _ in range(depth):
+        #             op = np.random.choice(self.aug_list)
+        #             image_aug = op(image_aug, self.aug_severity, img_size)
+        #         # Preprocessing commutes since all coefficients are convex
+        #         image_aug = np.asarray(image_aug, dtype=np.float32)
+        #         mix += ws[i] * image_aug
+        #     mixed = (1 - m) * img + m * mix
+        #     mixed = np.trunc(mixed)
+        #     return self.do_normalize(mixed)
+
+
+        else:
+            mix = np.zeros_like(img.copy(), dtype=np.float32)
+            for i in range(self.mixture_width):
+                image_aug = Image.fromarray(img.copy(), "RGB")
+                depth = self.mixture_depth if self.mixture_depth > 0 else np.random.randint(1, 4)
+                for _ in range(depth):
+                    op = np.random.choice(self.aug_list)
+                    image_aug = op(image_aug, self.aug_severity, img_size)
+                # Preprocessing commutes since all coefficients are convex
+                image_aug = np.asarray(image_aug, dtype=np.float32)
+                mix += ws[i] * image_aug
+            mixed = (1 - m) * img + m * mix
+            mixed = np.trunc(mixed)
+            return mixed
+
+
+
 
 # """
 # augmix with mmdetection

@@ -19,6 +19,7 @@ import warnings
 
 import torchvision.transforms.functional as F
 import torch.nn.functional as FF
+from torchvision import transforms
 
 if sys.version_info < (3, 3):
     Sequence = collections.Sequence
@@ -697,29 +698,74 @@ class LabelBoundaryTransform:
 
 
 class Tensor:
+    def __init__(self, do_pixmix, do_augmix, normalize):
+        self.do_pixmix = do_pixmix
+        self.normalize = normalize
+        self.do_augmix = do_augmix
+
     def _trans(self, img, dtype):
         img = np.array(img, dtype=dtype)
         if len(img.shape) == 3:
             img = np.ascontiguousarray(np.transpose(img, (2, 0, 1)))
         return torch.from_numpy(img)
 
+    def _trans_norm(self, img, dtype):
+            img = np.array(img, dtype=np.uint8)
+            return transforms.ToTensor()(img)
+
+
+
+
     def __call__(self, example):
         ret_dict = {}
         for k in ['left', 'right',  'left_aug1', 'left_aug2', 'right_aug1', 'right_aug2']:
             if k in example:
                 ret_dict[k] = example[k]
-        if 'left' in example:
-            ret_dict['left'] = self._trans(example['left'], np.float32)
-        if 'right' in example:
-            ret_dict['right'] = self._trans(example['right'], np.float32)
-        if 'left_aug1' in example:
-            ret_dict['left_aug1'] = self._trans(example['left_aug1'], np.float32)
-        if 'left_aug2' in example:
-            ret_dict['left_aug2'] = self._trans(example['left_aug2'], np.float32)
-        if 'right_aug1' in example:
-            ret_dict['right_aug1'] = self._trans(example['right_aug1'], np.float32)
-        if 'right_aug2' in example:
-            ret_dict['right_aug2'] = self._trans(example['right_aug2'], np.float32)
+
+        if self.do_pixmix:
+            if 'left' in example:
+                ret_dict['left'] = example['left']
+            if 'right' in example:
+                ret_dict['right'] = example['right']
+            if 'left_aug1' in example:
+                ret_dict['left_aug1'] = example['left_aug1']
+            if 'left_aug2' in example:
+                ret_dict['left_aug2'] = example['left_aug2']
+            if 'right_aug1' in example:
+                ret_dict['right_aug1'] = example['right_aug1']
+            if 'right_aug2' in example:
+                ret_dict['right_aug2'] = example['right_aug2']
+
+
+        elif self.do_augmix == 1 and self.normalize == 1:
+            if 'left' in example:
+                ret_dict['left'] = self._trans_norm(example['left'], np.float32)
+            if 'right' in example:
+                ret_dict['right'] = self._trans_norm(example['right'], np.float32)
+            if 'left_aug1' in example:
+                ret_dict['left_aug1'] = example['left_aug1']
+            if 'left_aug2' in example:
+                ret_dict['left_aug2'] = example['left_aug2']
+            if 'right_aug1' in example:
+                ret_dict['right_aug1'] = example['right_aug1']
+            if 'right_aug2' in example:
+                ret_dict['right_aug2'] = example['right_aug2']
+
+        else:                      #augmix
+            if 'left' in example:
+                ret_dict['left'] = self._trans(example['left'], np.float32)
+            if 'right' in example:
+                ret_dict['right'] = self._trans(example['right'], np.float32)
+            if 'left_aug1' in example:
+                ret_dict['left_aug1'] = self._trans(example['left_aug1'], np.float32)
+            if 'left_aug2' in example:
+                ret_dict['left_aug2'] = self._trans(example['left_aug2'], np.float32)
+            if 'right_aug1' in example:
+                ret_dict['right_aug1'] = self._trans(example['right_aug1'], np.float32)
+            if 'right_aug2' in example:
+                ret_dict['right_aug2'] = self._trans(example['right_aug2'], np.float32)
+
+
 
         if 'disp' in example:
             ret_dict['disp'] = self._trans(example['disp'], np.float32)

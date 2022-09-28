@@ -190,6 +190,20 @@ class Options:
         self.parser.add_argument('--to_rgb', action='store_true', default=True)
         self.parser.add_argument('--no_jsd', action='store_true', default=False)
 
+        # PIXMIX
+
+        self.parser.add_argument('--pixmix', action='store_true',
+                                )
+        self.parser.add_argument('--pixmix_auglist', type=str,
+                                 choices=['pixmix_no_translate','pixmix_basic','pixmix_all'], default='pixmix_no_translate')
+        self.parser.add_argument('--pixmix_method', type=str, choices=['no_jsd', 'copy', 'all'], default='no_jsd', help='[copy, all] need --jsd' )
+        self.parser.add_argument('--mixing_set', type=str, default='/ws/data/fractals_and_fvis')
+
+        #Normalize
+        self.parser.add_argument('--normalize', action='store_true',
+                                 )
+
+
         # Additional Loss
         self.parser.add_argument('--jsd', action='store_true',
                                  help='Use additional loss = jsd')
@@ -198,6 +212,10 @@ class Options:
         # Log
         self.parser.add_argument('--wandb', action='store_true',
                                  help='Use wandb logger')
+
+
+
+
 
     def parse(self):
         self._dataset_options()

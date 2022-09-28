@@ -8,6 +8,7 @@ from dataloaders.datasets import Cityscapes, CityLostFound, LostFound
 # from dataloaders import custom_transforms as sw
 from dataloaders import custom_transforms2 as sw
 from dataloaders import augmix
+from dataloaders import pixmix_utils
 
 def get_dataset(opts):
     """ Dataset And Augmentation
@@ -28,11 +29,14 @@ def get_dataset(opts):
         train_transform_list = [sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb),
                                 sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
                                 sw.LabelBoundaryTransform(num_classes=opts.num_classes, reduce=True),
-                                sw.Tensor()]
+                                sw.Tensor(opts.pixmix, opts.augmix, opts.normalize)]
         val_transform_list = [sw.FixedResize(target_size),
-                              sw.Tensor()]
+                              sw.Tensor(opts.pixmix, opts.augmix, opts.normalize)]
         if opts.augmix:
-            train_transform_list.insert(-2, augmix.AugMix(mean, std, opts.aug_list, opts.to_rgb, opts.no_jsd))
+            train_transform_list.insert(-2, augmix.AugMix(mean, std, opts.normalize, opts.aug_list, opts.to_rgb, opts.no_jsd))
+        if opts.pixmix:
+            train_transform_list.insert(-2, pixmix_utils.PixMix(opts.mixing_set, opts.pixmix_auglist, opts.pixmix_method, opts.normalize))
+
 
         train_transform = sw.Compose(train_transform_list)
         val_transform = sw.Compose(val_transform_list)
@@ -63,12 +67,15 @@ def get_dataset(opts):
                                 sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb, min=min_, max=max_, new_crop=new_crop),
                                 sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
                                 sw.LabelBoundaryTransform(num_classes=opts.num_classes, reduce=True),
-                                sw.Tensor(),]
+                                sw.Tensor(opts.pixmix,opts.normalize),]
         val_transform_list = [sw.CropBlackArea(),
                               sw.FixedResize(target_size),
-                              sw.Tensor(),]
+                              sw.Tensor(opts.pixmix, opts.normalize),]
         if opts.augmix:
             train_transform_list.insert(-2, augmix.AugMix(mean, std, opts.aug_list, opts.to_rgb, opts.no_jsd))
+
+        if opts.pixmix:
+            train_transform_list.insert(-2, pixmix_utils.PixMix(opts.mixing_set, opts.pixmix_auglist, opts.pixmix_method, opts.normalize))
 
         train_transform = sw.Compose(train_transform_list)
         val_transform = sw.Compose(val_transform_list)
@@ -99,11 +106,14 @@ def get_dataset(opts):
                                 # sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb),
                                 sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
                                 sw.LabelBoundaryTransform(num_classes=opts.num_classes, reduce=True),
-                                sw.Tensor()]
+                                sw.Tensor(opts.pixmix)]
         val_transform_list = [sw.RandomCrop_PIL(384, 1280, validate=True),
-                              sw.Tensor(),]
+                              sw.Tensor(opts.pixmix),]
         if opts.augmix:
             train_transform_list.insert(-2, augmix.AugMix(mean, std, opts.aug_list, opts.to_rgb, opts.no_jsd))
+        if opts.pixmix:
+            train_transform_list.insert(-2,
+                                        pixmix_utils.PixMix(opts.mixing_set, opts.pixmix_auglist, opts.pixmix_method, opts.normalize))
 
         train_transform = sw.Compose(train_transform_list)
         val_transform = sw.Compose(val_transform_list)
@@ -125,11 +135,13 @@ def get_dataset(opts):
                                 sw.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5),
                                 # sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb),
                                 sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
-                                sw.Tensor(),]
+                                sw.Tensor(opts.pixmix),]
         val_transform_list = [sw.RandomCrop_PIL(384, 1280, validate=True),
-                              sw.Tensor(),]
+                              sw.Tensor(opts.pixmix),]
         if opts.augmix:
             train_transform_list.insert(-2, augmix.AugMix(mean, std, opts.aug_list, opts.to_rgb, opts.no_jsd))
+        if opts.pixmix:
+            train_transform_list.insert(-2, pixmix_utils.PixMix(opts.mixing_set, opts.pixmix_auglist, opts.pixmix_method, opts.normalize))
 
         train_transform = sw.Compose(train_transform_list)
         val_transform = sw.Compose(val_transform_list)
@@ -156,11 +168,13 @@ def get_dataset(opts):
 
         train_transform_list = [sw.RandomSquareCropAndScale(random_crop_size, ignore_id=255, mean=mean_rgb),
                                 sw.SetTargetSize(target_size=target_size_crops, target_size_feats=target_size_crops_feats),
-                                sw.Tensor(),]
+                                sw.Tensor(opts.pixmix),]
         val_transform_list = [sw.FixedResize((896, 512)),
-                              sw.Tensor(),]
+                              sw.Tensor(opts.pixmix),]
         if opts.augmix:
             train_transform_list.insert(-2, augmix.AugMix(mean, std, opts.aug_list, opts.to_rgb, opts.no_jsd))
+        if opts.pixmix:
+            train_transform_list.insert(-2, pixmix_utils.PixMix(opts.mixing_set, opts.pixmix_auglist, opts.pixmix_method, opts.normalize))
 
         train_transform = sw.Compose(train_transform_list)
         val_transform = sw.Compose(val_transform_list)
