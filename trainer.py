@@ -168,6 +168,10 @@ class Trainer(InitOpts):
 
             output = self.performance_check_train(disp_loss, total_loss, pred_disp, gt_disp, mask, score=None)
             output['additional_loss'] = float(additional_loss)
+            output['loss2'] = float(loss2)
+            output['disp_loss_scaled'] = float(disp_loss * self.opts.disp_weight)
+            output['loss2_scaled'] = float(loss2 * self.opts.sem_weight)
+            output['additional_loss_scaled'] = float(additional_loss * self.opts.additional_weight)
             self.wandb_logger.after_train_iter(output)
 
             last_data_time = time.time()

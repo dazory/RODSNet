@@ -41,6 +41,10 @@ if __name__ == '__main__':
     trainer = Trainer(opts)
 
     wandb_logger = WandbLogger(init_kwargs=parse_wandb_init_kwargs(opts),
+                               train_epoch_interval=trainer.opts.train_epoch_interval,
+                               train_iter_interval=trainer.opts.train_iter_interval,
+                               val_epoch_interval=trainer.opts.val_epoch_interval,
+                               val_iter_interval=trainer.opts.val_iter_interval,
                                use_wandb=opts.wandb)
     trainer.set_wandb_logger(logger=wandb_logger)
 

@@ -292,7 +292,14 @@ class InitOpts():
                 model_dict.update(pretrained_dict)
                 # 3. load the new state dict
                 self.model.load_state_dict(model_dict, strict=False)
-
+            elif self.opts.transfer_all:
+                print("Training state restored from %s for transfer learning" % self.opts.resume)
+                print("Training from epochs {}".format(self.cur_epochs))
+                pretrained_dict = {k: v for k, v in loaded_pt.items() if k in model_dict}
+                # 2. overwrite entries in the existing state dict
+                model_dict.update(pretrained_dict)
+                # 3. load the new state dict
+                self.model.load_state_dict(model_dict, strict=False)
             else:
                 print("Just Testing results of pretrained network model...")
                 print("If you want to continue training with checkpoints, add --continue_training options!")

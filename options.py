@@ -122,6 +122,7 @@ class Options:
                                  help='put the path to resuming file if needed')
         self.parser.add_argument("--continue_training", action='store_true', default=False)
         self.parser.add_argument("--transfer_disparity", action='store_true', default=False)
+        self.parser.add_argument("--transfer_all", action='store_true', default=False)
         self.parser.add_argument('--checkname', type=str, default='test',
                                  help='set the checkpoint name')
 
@@ -196,8 +197,11 @@ class Options:
         self.parser.add_argument('--additional_weight', type=float, default=10.0,
                                  help='lambda weight will be multiplied by additional loss.')
         # Log
-        self.parser.add_argument('--wandb', action='store_true',
-                                 help='Use wandb logger')
+        self.parser.add_argument('--wandb', action='store_true', help='Use wandb logger')
+        self.parser.add_argument('--train_epoch_interval', type=int, default=1)
+        self.parser.add_argument('--train_iter_interval', type=int, default=100)
+        self.parser.add_argument('--val_epoch_interval', type=int, default=1)
+        self.parser.add_argument('--val_iter_interval', type=int, default=10)
 
     def parse(self):
         self._dataset_options()
